@@ -1,0 +1,27 @@
+# Optional override: run prebuilt GHCR images instead of building locally.
+#
+#   export PULLSPOOL_GHCR_NAMESPACE=ghcr.io/your-github-name
+#   docker compose -f docker-compose.yml -f docker-compose.ghcr.yml pull
+#   docker compose -f docker-compose.yml -f docker-compose.ghcr.yml up -d --no-build
+#
+# or simply:
+#   ./scripts/quickstart.sh --ghcr ghcr.io/your-github-name
+#
+# The images must be public, or run `docker login ghcr.io` first.
+
+services:
+  aria2:
+    image: ${PULLSPOOL_GHCR_NAMESPACE:?set PULLSPOOL_GHCR_NAMESPACE to ghcr.io/<owner>}/pullspool-aria2:${PULLSPOOL_GHCR_TAG:-latest}
+    pull_policy: always
+
+  backend:
+    image: ${PULLSPOOL_GHCR_NAMESPACE:?set PULLSPOOL_GHCR_NAMESPACE to ghcr.io/<owner>}/pullspool-backend:${PULLSPOOL_GHCR_TAG:-latest}
+    pull_policy: always
+
+  frontend:
+    image: ${PULLSPOOL_GHCR_NAMESPACE:?set PULLSPOOL_GHCR_NAMESPACE to ghcr.io/<owner>}/pullspool-frontend:${PULLSPOOL_GHCR_TAG:-latest}
+    pull_policy: always
+
+  caddy:
+    image: ${PULLSPOOL_GHCR_NAMESPACE:?set PULLSPOOL_GHCR_NAMESPACE to ghcr.io/<owner>}/pullspool-caddy:${PULLSPOOL_GHCR_TAG:-latest}
+    pull_policy: always

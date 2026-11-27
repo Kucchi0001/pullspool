@@ -1,0 +1,51 @@
+# --- 运行期数据（绝不提交） ---
+data/
+*.db
+*.db-wal
+*.db-shm
+bootstrap-admin.txt
+.token_secret
+
+# --- 测试用二进制（aria2c） ---
+backend/.cache/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# --- Node / 前端 ---
+node_modules/
+frontend/dist/
+frontend/.vite/
+*.local.ts
+
+# --- 环境与密钥 ---
+.env
+.env.*
+!.env.example
+
+# --- 编辑器 / 系统 ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- 测试产物 ---
+test-results/
+playwright-report/
+coverage/
+htmlcov/
+
+# --- 本地容器实测数据 ---
+data-test/
+backups/
+data-accept/
+data-*/
+
+# --- generated release artifacts ---
+release/

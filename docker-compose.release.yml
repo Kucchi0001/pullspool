@@ -1,0 +1,167 @@
+# PullSpool — image-only deployment for GitHub-hosted releases.
+#
+# No build context and no repository files are required (except this compose
+# file and a .env). All four images come from a registry:
+#
+#   aria2 / backend / frontend / caddy
+#
+# Required in .env:
+#   PULLSPOOL_GHCR_NAMESPACE=ghcr.io/<your-github-name>
+#   PULLSPOOL_GHCR_TAG=latest        # or v1.0.0
+#   PUBLIC_IP / TLS_HOST / PUBLIC_BASE_URL  (quickstart fills these)
+#
+# Usage:
+#   docker compose -f docker-compose.release.yml pull
+#   docker compose -f docker-compose.release.yml up -d
+#
+# License notices: THIRD_PARTY_NOTICES.md, LICENSES/, THIRD_PARTY_LICENSES/
+
+name: ${COMPOSE_PROJECT_NAME:-pullspool}
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  aria2:
+    image: ${PULLSPOOL_GHCR_NAMESPACE:?set PULLSPOOL_GHCR_NAMESPACE to ghcr.io/<owner>}/pullspool-aria2:${PULLSPOOL_GHCR_TAG:-latest}
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_add:
+      - NET_ADMIN
+    networks:
+      - core
+      - egress
+    environment:
+      ARIA2_RPC_PORT: ${ARIA2_RPC_PORT:-6800}
+      ARIA2_RPC_SECRET: ${ARIA2_RPC_SECRET:-}
+      ARIA2_EGRESS_GUARD: ${ARIA2_EGRESS_GUARD:-on}
+      ARIA2_SAVE_SESSION_INTERVAL: ${ARIA2_SAVE_SESSION_INTERVAL:-30}
+      PULLSPOOL_UID: ${PULLSPOOL_UID:-1000}
+      PULLSPOOL_GID: ${PULLSPOOL_GID:-1000}
+      TZ: ${TZ:-Asia/Shanghai}
+    volumes:
+      - ${HOST_DATA_DIR:-./data}/downloads:/data/downloads
+      - ${HOST_DATA_DIR:-./data}/aria2:/aria2
+    mem_limit: ${ARIA2_MEM_LIMIT:-256m}
+    cpus: ${ARIA2_CPU_LIMIT:-1.0}
+    logging: *default-logging
+
+  backend:
+    image: ${PULLSPOOL_GHCR_NAMESPACE:?set PULLSPOOL_GHCR_NAMESPACE to ghcr.io/<owner>}/pullspool-backend:${PULLSPOOL_GHCR_TAG:-latest}
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    user: "${PULLSPOOL_UID:-1000}:${PULLSPOOL_GID:-1000}"
+    networks:
+      - app
+      - core
+      - egress
+    depends_on:
+      aria2:
+        condition: service_started
+    environment:
+      APP_ENV: ${APP_ENV:-production}
+      DATA_DIR: /data
+      DOWNLOAD_ROOT: /data/downloads
+      DATABASE_URL: sqlite+aiosqlite:////data/db/pullspool.db
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      API_RATE_LIMIT_PER_MINUTE: ${API_RATE_LIMIT_PER_MINUTE:-300}
+      LOG_FORMAT: ${LOG_FORMAT:-text}
+      TZ: ${TZ:-Asia/Shanghai}
+      TIMEZONE: ${TIMEZONE:-${TZ:-Asia/Shanghai}}
+      PUBLIC_IP: ${PUBLIC_IP:-}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
+      TLS_MODE: ${TLS_MODE:-internal}
+      DOMAIN: ${DOMAIN:-}
+      BOOTSTRAP_ADMIN_USERNAME: ${BOOTSTRAP_ADMIN_USERNAME:-admin}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-admin}
+      ARIA2_RPC_URL: http://aria2:${ARIA2_RPC_PORT:-6800}/jsonrpc
+      ARIA2_RPC_SECRET: ${ARIA2_RPC_SECRET:-}
+      ARIA2_TIMEOUT_SECONDS: ${ARIA2_TIMEOUT_SECONDS:-5}
+      DOWNLOAD_TOKEN_SECRET: ${DOWNLOAD_TOKEN_SECRET:-}
+      TRUST_PROXY_HEADERS: "true"
+      RUN_MIGRATIONS_ON_STARTUP: "true"
+      TASK_POLL_INTERVAL_SECONDS: ${TASK_POLL_INTERVAL_SECONDS:-1}
+      SCHEDULER_INTERVAL_SECONDS: ${SCHEDULER_INTERVAL_SECONDS:-1}
+      CLEANUP_INTERVAL_SECONDS: ${CLEANUP_INTERVAL_SECONDS:-600}
+    volumes:
+      - ${HOST_DATA_DIR:-./data}:/data
+    mem_limit: ${BACKEND_MEM_LIMIT:-320m}
+    cpus: ${BACKEND_CPU_LIMIT:-1.0}
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=5).status == 200 else 1)"
+      interval: 30s
+      timeout: 8s
+      retries: 3
+      start_period: 45s
+    logging: *default-logging
+
+  frontend:
+    image: ${PULLSPOOL_GHCR_NAMESPACE:?set PULLSPOOL_GHCR_NAMESPACE to ghcr.io/<owner>}/pullspool-frontend:${PULLSPOOL_GHCR_TAG:-latest}
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - edge
+      - app
+    depends_on:
+      backend:
+        condition: service_healthy
+    mem_limit: ${FRONTEND_MEM_LIMIT:-64m}
+    cpus: ${FRONTEND_CPU_LIMIT:-0.5}
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging: *default-logging
+
+  caddy:
+    image: ${PULLSPOOL_GHCR_NAMESPACE:?set PULLSPOOL_GHCR_NAMESPACE to ghcr.io/<owner>}/pullspool-caddy:${PULLSPOOL_GHCR_TAG:-latest}
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - edge
+    depends_on:
+      frontend:
+        condition: service_healthy
+    ports:
+      - "${BIND_ADDRESS:-0.0.0.0}:${HTTP_PORT:-18080}:${HTTP_PORT:-18080}"
+      - "${BIND_ADDRESS:-0.0.0.0}:${HTTPS_PORT:-18443}:${HTTPS_PORT:-18443}"
+    environment:
+      HTTP_ENABLED: ${HTTP_ENABLED:-true}
+      HTTPS_ENABLED: ${HTTPS_ENABLED:-true}
+      TLS_MODE: ${TLS_MODE:-internal}
+      HTTP_PORT: ${HTTP_PORT:-18080}
+      HTTPS_PORT: ${HTTPS_PORT:-18443}
+      TLS_HOST: ${TLS_HOST:-${PUBLIC_IP:-}}
+      DOMAIN: ${DOMAIN:-}
+      ACME_EMAIL: ${ACME_EMAIL:-}
+      TZ: ${TZ:-Asia/Shanghai}
+    volumes:
+      - ${HOST_DATA_DIR:-./data}/caddy/data:/data
+      - ${HOST_DATA_DIR:-./data}/caddy/config:/config
+    mem_limit: ${CADDY_MEM_LIMIT:-96m}
+    cpus: ${CADDY_CPU_LIMIT:-0.5}
+    logging: *default-logging
+
+networks:
+  edge:
+    driver: bridge
+  app:
+    driver: bridge
+  core:
+    driver: bridge
+    internal: true
+  egress:
+    driver: bridge
