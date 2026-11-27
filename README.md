@@ -128,8 +128,8 @@ sudo sh scripts/quickstart.sh --ghcr ghcr.io/<your-github-name>
 私有包先执行 `docker login ghcr.io`。`push` 一个 `v*` tag 会触发 `.github/workflows/images.yml`：
 
 ```bash
-git tag v1.0.0
-git push origin v1.0.0
+git tag v1.0.1
+git push origin v1.0.1
 ```
 
 ### 纯镜像 Compose（发布后用）
@@ -320,4 +320,5 @@ PullSpool 自身源代码采用 **MIT**，见 [LICENSE](LICENSE)。
 运行镜像包含的第三方组件仍按其各自许可证分发，完整清单见
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)，许可证原文在 [LICENSES/](LICENSES/)，
 逐包版权/许可证文本在 [THIRD_PARTY_LICENSES/](THIRD_PARTY_LICENSES/)。
+这些文件也会复制到镜像内的 `/usr/share/doc/pullspool/`。
 其中 aria2 以 **GPL-2.0-or-later** 分发，源码获取方式见第三方声明。

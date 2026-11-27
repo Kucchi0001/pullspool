@@ -18,6 +18,8 @@ services:
   aria2:
     build:
       context: ./docker/aria2
+      additional_contexts:
+        licenses: ./docker/licenses
     image: pullspool-aria2:local
     restart: unless-stopped
     security_opt:
@@ -45,6 +47,8 @@ services:
   backend:
     build:
       context: ./backend
+      additional_contexts:
+        licenses: ./docker/licenses
       args:
         PIP_INDEX_URL: ${PIP_INDEX_URL:-}
     image: pullspool-backend:local
@@ -103,6 +107,8 @@ services:
   frontend:
     build:
       context: ./frontend
+      additional_contexts:
+        licenses: ./docker/licenses
       args:
         NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmjs.org}
     image: pullspool-frontend:local

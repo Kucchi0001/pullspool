@@ -4,6 +4,8 @@ FROM python:3.12-slim-bookworm
 LABEL org.opencontainers.image.title="PullSpool backend"
 LABEL org.opencontainers.image.licenses="MIT"
 
+COPY --from=licenses . /usr/share/doc/pullspool/
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \

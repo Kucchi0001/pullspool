@@ -3,6 +3,8 @@ FROM alpine:3.20
 LABEL org.opencontainers.image.title="PullSpool aria2"
 LABEL org.opencontainers.image.licenses="MIT"
 
+COPY --from=licenses . /usr/share/doc/pullspool/
+
 RUN apk add --no-cache \
         aria2 \
         ca-certificates \

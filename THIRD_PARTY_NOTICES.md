@@ -149,3 +149,12 @@ Node.js 22、Vite、`@vitejs/plugin-vue`、TypeScript、`vue-tsc`、Playwright�
 
 这些文件保留了各包自己的版权行和许可证原文；`LICENSES/` 中的文件是可复用的
 标准许可证全文。两者应一起随源码或镜像二进制分发。
+
+所有 PullSpool 运行时镜像也会将 `LICENSE`、本文件、`LICENSES/` 和
+`THIRD_PARTY_LICENSES/` 复制到镜像内：
+
+```text
+/usr/share/doc/pullspool/
+```
+
+因此只 `docker pull` 镜像的用户也能在容器内读取完整声明。

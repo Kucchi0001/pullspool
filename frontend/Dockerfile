@@ -18,6 +18,8 @@ FROM nginx:1.27-alpine
 LABEL org.opencontainers.image.title="PullSpool frontend"
 LABEL org.opencontainers.image.licenses="MIT"
 
+COPY --from=licenses . /usr/share/doc/pullspool/
+
 RUN rm -f /etc/nginx/conf.d/default.conf
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY security-headers.conf /etc/nginx/security-headers.conf
