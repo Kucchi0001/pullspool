@@ -134,13 +134,14 @@ git push origin v1.0.0
 
 ### 纯镜像 Compose（发布后用）
 
-发布镜像后，用户不需要源码，只要 [docker-compose.release.yml](docker-compose.release.yml) 和 `.env`：
+发布镜像后，用户不需要源码，只要 [docker-compose.release.yml](docker-compose.release.yml) 和
+[.env.release.example](.env.release.example)：
 
 ```bash
 curl -fsSLO https://raw.githubusercontent.com/<owner>/pullspool/main/docker-compose.release.yml
-curl -fsSLO https://raw.githubusercontent.com/<owner>/pullspool/main/.env.example
-mv .env.example .env
-# 修改 PULLSPOOL_GHCR_NAMESPACE / PULLSPOOL_GHCR_TAG / PUBLIC_IP / TLS_HOST / PUBLIC_BASE_URL
+curl -fsSLO https://raw.githubusercontent.com/<owner>/pullspool/main/.env.release.example
+mv .env.release.example .env
+# 修改 PUBLIC_IP / TLS_HOST / PUBLIC_BASE_URL（以及需要时的 GHCR tag）
 chmod 600 .env
 
 docker compose -f docker-compose.release.yml pull
