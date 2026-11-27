@@ -151,6 +151,11 @@ class OriginCheckMiddleware(BaseHTTPMiddleware):
 
         source_host = urlparse(source).netloc.lower()
         request_host = request.headers.get("host", "").lower()
-        if source_host and (source_host == request_host or source_host in self.allowed_hosts):
+        forwarded_host = request.headers.get("x-forwarded-host", "").split(",", 1)[0].strip().lower()
+        if source_host and (
+            source_host == request_host
+            or (forwarded_host and source_host == forwarded_host)
+            or source_host in self.allowed_hosts
+        ):
             return await call_next(request)
         return self._reject()

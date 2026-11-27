@@ -8,6 +8,11 @@
 #
 # For production HTTPS, use docker-compose.release.yml + env.release.example.
 # This file intentionally contains NO ${...} interpolation.
+#
+# First deploy pulls four images; 3-5 minutes on a slow network is normal.
+# The one-shot "init" service exits 0 after chowning ./data. A panel may show
+# it as "exited" (partial running); that is successful initialization, not a
+# failed service.
 
 name: pullspool-panel
 
@@ -36,7 +41,7 @@ services:
     logging: *default-logging
 
   aria2:
-    image: ghcr.io/kucchi0001/pullspool-aria2:v1.0.1
+    image: ghcr.io/kucchi0001/pullspool-aria2:v1.0.2
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
@@ -64,7 +69,7 @@ services:
     logging: *default-logging
 
   backend:
-    image: ghcr.io/kucchi0001/pullspool-backend:v1.0.1
+    image: ghcr.io/kucchi0001/pullspool-backend:v1.0.2
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
@@ -120,7 +125,7 @@ services:
     logging: *default-logging
 
   frontend:
-    image: ghcr.io/kucchi0001/pullspool-frontend:v1.0.1
+    image: ghcr.io/kucchi0001/pullspool-frontend:v1.0.2
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
@@ -141,7 +146,7 @@ services:
     logging: *default-logging
 
   caddy:
-    image: ghcr.io/kucchi0001/pullspool-caddy:v1.0.1
+    image: ghcr.io/kucchi0001/pullspool-caddy:v1.0.2
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true

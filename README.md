@@ -128,8 +128,8 @@ sudo sh scripts/quickstart.sh --ghcr ghcr.io/<your-github-name>
 私有包先执行 `docker login ghcr.io`。`push` 一个 `v*` tag 会触发 `.github/workflows/images.yml`：
 
 ```bash
-git tag v1.0.1
-git push origin v1.0.1
+git tag v1.0.2
+git push origin v1.0.2
 ```
 
 ### 纯镜像 Compose（发布后用）
@@ -168,6 +168,9 @@ docker compose -f docker-compose.panel.yml up -d
 > 这是 HTTP 明文模式，只适合首次试用/内网。生产请用
 > `docker-compose.release.yml` + `env.release.example` 开 HTTPS。
 > 默认账号 `admin / admin`，首次登录会强制改密。
+>
+> 首次部署要拉四个镜像，慢网络 3–5 分钟正常。`init` 是执行完 chown 就退出的一次性容器，
+> 面板显示它 `Exited (0)` 或“部分容器运行”是正常初始化，不是启动失败。
 
 ### 手动步骤（可选）
 

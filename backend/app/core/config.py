@@ -41,7 +41,7 @@ class AppConfig(BaseSettings):
 
     # --- runtime -----------------------------------------------------------
     app_env: Literal["development", "test", "production"] = "development"
-    version: str = "1.0.1"
+    version: str = "1.0.2"
 
     # --- paths -------------------------------------------------------------
     data_dir: Path = Path("/data")

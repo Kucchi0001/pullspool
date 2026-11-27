@@ -180,6 +180,17 @@ def test_csrf_allows_same_origin(client: TestClient) -> None:
     assert response.status_code == 204
 
 
+def test_csrf_allows_forwarded_proxy_host(client: TestClient) -> None:
+    response = client.post(
+        "/api/auth/logout",
+        headers={
+            "Origin": "http://pull.example:18080",
+            "X-Forwarded-Host": "pull.example:18080",
+        },
+    )
+    assert response.status_code == 204
+
+
 def test_csrf_allows_non_browser_client(client: TestClient) -> None:
     response = client.post("/api/auth/logout")
     assert response.status_code == 204
