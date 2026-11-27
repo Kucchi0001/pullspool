@@ -154,6 +154,21 @@ docker compose -f docker-compose.release.yml up -d
 许可证文件随仓库/Release 一并分发：`THIRD_PARTY_NOTICES.md`、`LICENSES/`、
 `THIRD_PARTY_LICENSES/`；二创/再分发镜像时请保留。
 
+### 面板单文件（HTTP，仅测试）
+
+有些面板只能粘贴一个 Compose YAML，不会加载 `.env`。用
+[docker-compose.panel.yml](docker-compose.panel.yml)：它没有任何 `${...}` 变量，
+不需要 `.env`，默认是 HTTP：
+
+```bash
+# 面板只接受 YAML 时使用；访问 http://<VPS_IP>:18080
+docker compose -f docker-compose.panel.yml up -d
+```
+
+> 这是 HTTP 明文模式，只适合首次试用/内网。生产请用
+> `docker-compose.release.yml` + `env.release.example` 开 HTTPS。
+> 默认账号 `admin / admin`，首次登录会强制改密。
+
 ### 手动步骤（可选）
 
 ```bash

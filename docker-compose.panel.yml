@@ -1,0 +1,181 @@
+# PullSpool panel compose — self-contained, no .env required.
+#
+# Use this file when a panel only lets you paste one Compose YAML and does not
+# load an .env file. It is HTTP-only for first-run/panel compatibility:
+#
+#   http://<VPS_IP>:18080
+#   admin / admin  (forced change on first login)
+#
+# For production HTTPS, use docker-compose.release.yml + env.release.example.
+# This file intentionally contains NO ${...} interpolation.
+
+name: pullspool-panel
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  # One-shot root container: creates/chowns the bind-mounted data directory so
+  # the unprivileged backend can write SQLite and downloads without manual chown.
+  init:
+    image: alpine:3.20
+    restart: "no"
+    network_mode: none
+    command:
+      - /bin/sh
+      - -c
+      - >-
+        mkdir -p /data/db /data/downloads /data/aria2 /data/caddy/data /data/caddy/config
+        && chown -R 1000:1000 /data
+        && chmod 750 /data
+    volumes:
+      - ./data:/data
+    logging: *default-logging
+
+  aria2:
+    image: ghcr.io/kucchi0001/pullspool-aria2:v1.0.1
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_add:
+      - NET_ADMIN
+    networks:
+      - core
+      - egress
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    environment:
+      ARIA2_RPC_PORT: "6800"
+      ARIA2_RPC_SECRET: ""
+      ARIA2_EGRESS_GUARD: "on"
+      ARIA2_SAVE_SESSION_INTERVAL: "30"
+      PULLSPOOL_UID: "1000"
+      PULLSPOOL_GID: "1000"
+      TZ: Asia/Shanghai
+    volumes:
+      - ./data/downloads:/data/downloads
+      - ./data/aria2:/aria2
+    mem_limit: 256m
+    cpus: "1.0"
+    logging: *default-logging
+
+  backend:
+    image: ghcr.io/kucchi0001/pullspool-backend:v1.0.1
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    user: "1000:1000"
+    networks:
+      - app
+      - core
+      - egress
+    depends_on:
+      init:
+        condition: service_completed_successfully
+      aria2:
+        condition: service_started
+    environment:
+      APP_ENV: production
+      DATA_DIR: /data
+      DOWNLOAD_ROOT: /data/downloads
+      DATABASE_URL: sqlite+aiosqlite:////data/db/pullspool.db
+      LOG_LEVEL: INFO
+      API_RATE_LIMIT_PER_MINUTE: "300"
+      LOG_FORMAT: text
+      TZ: Asia/Shanghai
+      TIMEZONE: Asia/Shanghai
+      PUBLIC_IP: ""
+      PUBLIC_BASE_URL: ""
+      TLS_MODE: "off"
+      DOMAIN: ""
+      BOOTSTRAP_ADMIN_USERNAME: admin
+      BOOTSTRAP_ADMIN_PASSWORD: admin
+      ARIA2_RPC_URL: http://aria2:6800/jsonrpc
+      ARIA2_RPC_SECRET: ""
+      ARIA2_TIMEOUT_SECONDS: "5"
+      DOWNLOAD_TOKEN_SECRET: ""
+      TRUST_PROXY_HEADERS: "true"
+      RUN_MIGRATIONS_ON_STARTUP: "true"
+      TASK_POLL_INTERVAL_SECONDS: "1"
+      SCHEDULER_INTERVAL_SECONDS: "1"
+      CLEANUP_INTERVAL_SECONDS: "600"
+    volumes:
+      - ./data:/data
+    mem_limit: 320m
+    cpus: "1.0"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=5).status == 200 else 1)"
+      interval: 30s
+      timeout: 8s
+      retries: 3
+      start_period: 45s
+    logging: *default-logging
+
+  frontend:
+    image: ghcr.io/kucchi0001/pullspool-frontend:v1.0.1
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - edge
+      - app
+    depends_on:
+      backend:
+        condition: service_healthy
+    mem_limit: 64m
+    cpus: "0.5"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging: *default-logging
+
+  caddy:
+    image: ghcr.io/kucchi0001/pullspool-caddy:v1.0.1
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - edge
+    depends_on:
+      frontend:
+        condition: service_healthy
+    ports:
+      - "0.0.0.0:18080:18080"
+    environment:
+      HTTP_ENABLED: "true"
+      HTTPS_ENABLED: "false"
+      TLS_MODE: "off"
+      HTTP_PORT: "18080"
+      HTTPS_PORT: "18443"
+      TLS_HOST: "127.0.0.1"
+      DOMAIN: ""
+      ACME_EMAIL: ""
+      TZ: Asia/Shanghai
+    volumes:
+      - ./data/caddy/data:/data
+      - ./data/caddy/config:/config
+    mem_limit: 96m
+    cpus: "0.5"
+    logging: *default-logging
+
+networks:
+  edge:
+    driver: bridge
+  app:
+    driver: bridge
+  core:
+    driver: bridge
+    internal: true
+  egress:
+    driver: bridge
